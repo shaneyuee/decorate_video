@@ -1,0 +1,2 @@
+int initEGL();
+int uninitEGL();

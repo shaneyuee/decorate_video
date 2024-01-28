@@ -1,0 +1,145 @@
+cmake_minimum_required(VERSION 3.20)
+project(decorateVideo)
+
+set(CMAKE_CXX_STANDARD 11)
+
+set(VERSION_MAJOR 1)
+set(VERSION_MINOR 3)
+set(VERSION_PATCH 9)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_FLAG}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_FLAG} -std=c++11 -pthread -fPIC")
+
+find_package(Git REQUIRED)
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} branch --show-current
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_REV
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+string(TIMESTAMP BUILD_TIME %y%m%d_%H%M%S)
+configure_file ("./version.h.in" "./version.h")
+
+if (POLICY CMP0072)
+  set(OpenGL_GL_PREFERENCE LEGACY)
+endif()
+
+set(LINUX_BRANCH "centos")
+if (APPLE)
+  set(MacOS TRUE)
+  message(STATUS "MacOS")
+elseif(LINUX)
+  set(CentOS TRUE)
+  message(STATUS "CentOS")
+else()
+  message(FATAL_ERROR "Unsupported platform")
+endif()
+
+if (CentOS)
+  set(USE_OFF_SCREEN TRUE)
+endif()
+
+if (MacOS)
+  add_definitions(-DMacOS)
+  SET(CMAKE_OSX_DEPLOYMENT_TARGET 14.0)
+endif()
+
+include(FindPkgConfig)
+pkg_search_module(OPUS REQUIRED opus)
+link_directories(${OPUS_LIBRARY_DIRS})
+list(APPEND common_LIBS ${OPUS_LIBRARIES})
+pkg_search_module(WAVPACK REQUIRED wavpack)
+link_directories(${WAVPACK_LIBRARY_DIRS})
+list(APPEND common_LIBS ${WAVPACK_LIBRARIES})
+pkg_search_module(VPX REQUIRED vpx)
+link_directories(${VPX_LIBRARY_DIRS})
+list(APPEND common_LIBS ${VPX_LIBRARIES})
+pkg_search_module(FONTCONFIG REQUIRED fontconfig)
+link_directories(${FONTCONFIG_LIBRARY_DIRS})
+list(APPEND common_LIBS ${FONTCONFIG_LIBRARIES})
+pkg_search_module(HARFBUZZ REQUIRED harfbuzz)
+link_directories(${HARFBUZZ_LIBRARY_DIRS})
+list(APPEND common_LIBS ${HARFBUZZ_LIBRARIES})
+pkg_search_module(FRIBIDI REQUIRED fribidi)
+link_directories(${FRIBIDI_LIBRARY_DIRS})
+list(APPEND common_LIBS ${FRIBIDI_LIBRARIES})
+pkg_search_module(GLFW REQUIRED glfw3)
+link_directories(${GLFW_LIBRARY_DIRS})
+list(APPEND common_LIBS ${GLFW_LIBRARIES})
+pkg_search_module(GLU REQUIRED glu)
+link_directories(${GLU_LIBRARY_DIRS})
+list(APPEND common_LIBS ${GLU_LIBRARIES})
+pkg_search_module(LIBWEBPDEMUX REQUIRED libwebpdemux)
+link_directories(${LIBWEBPDEMUX_LIBRARY_DIRS})
+pkg_search_module(LIBWEBP REQUIRED libwebp)
+link_directories(${LIBWEBP_LIBRARY_DIRS})
+pkg_search_module(LIBWEBPDECODER REQUIRED libwebpdecoder)
+link_directories(${LIBWEBPDECODER_LIBRARY_DIRS})
+list(APPEND common_LIBS ${LIBWEBP_LIBRARIES} ${LIBWEBPDEMUX_LIBRARIES} ${LIBWEBPDECODER_LIBRARIES})
+
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavfilter libavcodec libavutil libswresample libswscale)
+
+message(STATUS "common_LIBS: ${common_LIBS}")
+set(ffmpeg_LIBS avformat avfilter avcodec avutil swresample swscale opus wavpack vpx postproc fontconfig harfbuzz fribidi webp webpdecoder sharpyuv webpdemux imageioutil)
+link_directories(${FFMPEG_LIBRARY_DIRS})
+include_directories(${FFMPEG_INCLUDE_DIRS})
+
+if (CentOS)
+  add_definitions(-DCentOS)
+  set(ffmpeg_LIBS avformat avfilter avcodec avutil swresample swscale x264 webpdemux webpmux webp webpdecoder sharpyuv imageio_util opus wavpack vpx postproc ass fontconfig harfbuzz fribidi unibreak mp3lame)
+endif()
+
+find_package(OpenGL REQUIRED)
+if (OPENGL_FOUND)
+    include_directories(${OPENGL_INCLUDE_DIRS})
+    link_libraries(${OPENGL_LIBRARIES})
+endif()
+
+find_package(OpenCV REQUIRED)
+if (OPENCV_FOUND)
+  include_directories(${OPENCV_INCLUDE_DIRS})
+  link_libraries(${OPENCV_LIBRARIES})
+endif()
+
+add_subdirectory(filter)
+
+if (CentOS)
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+endif()
+
+include_directories(3rd/log)
+set(LOG_srcs 3rd/log/LOGHelp.cpp 3rd/log/UitlTools.cpp)
+
+find_package(Freetype REQUIRED)
+include_directories(${FREETYPE_INCLUDE_DIRS})
+if (FREETYPE_FOUND)
+    include_directories(${FREETYPE_INCLUDE_DIRS})
+    link_libraries(${FREETYPE_LIBRARIES})
+endif()
+
+find_package(GLEW REQUIRED)
+find_package(glfw3 REQUIRED)
+
+include_directories(${CMAKE_CURRENT_LIST_DIR}/3rd/cvxfont)
+
+add_executable(${PROJECT_NAME} decorateVideo.cpp videoplayer.cpp videowriter.cpp matops.cpp 3rd/gifdecoder/ffgif.cpp 3rd/cvxfont/cvxfont.cpp 3rd/shmqueue/shm_queue.c gl_render.cpp egl.cpp glad/glad.c pb.c event.cpp material.cpp stream_cmd.cpp ${LOG_srcs} ${FILTER_SRC})
+
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${ffmpeg_LIBS})
+target_link_libraries(${PROJECT_NAME} glfw GLU)
+if (USE_OFF_SCREEN)
+  add_definitions(-DUSE_OFF_SCREEN)
+  target_link_libraries(${PROJECT_NAME} GL EGL GLEW)
+endif()
+target_link_libraries(${PROJECT_NAME} dl lzma z)
+if (CentOS)
+  target_link_libraries(${PROJECT_NAME} rt)
+endif()
