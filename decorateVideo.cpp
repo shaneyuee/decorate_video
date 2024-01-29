@@ -43,12 +43,12 @@ static std::string get_ffmpeg_path()
         return ffmpeg;
     }
 
-    if(system("ffmpeg -version|grep -E 'version n*(4|5)'") == 0)
+    if(system("ffmpeg -version|grep 'version'") == 0)
     {
         return "ffmpeg";
     }
 
-    std::cerr << "FFMPEG not found or version mismatch, please install version 4 or 5." << std::endl;
+    std::cerr << "ffmpeg not found, please install it first." << std::endl;
     return "";
 }
 
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
         std::cout << "  --subtitle=file:top:left:width:height:style  # set subtitle file, position and style (ffmpeg subtitles:force_style)" << std::endl;
         std::cout << "                                        # see https://www.myzhenai.com.cn/post/4153.html for force_style" << std::endl;
         std::cout << "  --use_ffmpeg=file                     # use ffmpeg program file, default is /var/local/decorate_video/ffmpeg" << std::endl;
-        std::cout << "  --enable_ffmpeg_stat                  # enable ffmpeg statistic output" << std::endl;
+        std::cout << "  --disable_ffmpeg_stat                  # disable ffmpeg statistic output" << std::endl;
         std::cout << "  --blind_watermark=<type(text|image)>:<text|image_path>:<interval>" << std::endl;
         std::cout << "                                        # set blind water mark, parameters:" << std::endl;
         std::cout << "                                        #      type: text or image as water mark" << std::endl;
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
     watermark water = {NULL};
     std::shared_ptr<IWaterMark> blind_watermark = nullptr;
     const char *use_ffmpeg = NULL;
-    bool enable_ffmpeg_stat = false;
+    bool disable_ffmpeg_stat = false;
     const char *alpha_video = NULL; // left, right, top, bottom
     const char *alpha_engine = "opengl"; // opencv, opengl
     const char *stream_cmd_fifo = NULL, *stream_cmd_txtfile = NULL;
@@ -528,11 +528,11 @@ int main(int argc, char **argv) {
             --i;
             continue;
         }
-        opt = "--enable_ffmpeg_stat";
+        opt = "--disable_ffmpeg_stat";
         optlen = strlen(opt);
         if(strncasecmp(argv[i], opt, optlen)==0)
         {
-            enable_ffmpeg_stat = true;
+            disable_ffmpeg_stat = true;
             if(i+1 < argc)
                 memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
             --argc;
@@ -1211,7 +1211,7 @@ int main(int argc, char **argv) {
         }
         cmd = format_ffmepg_encode_cmdline(ffmpeg, outputvideo, output_w, output_h,
                 fps, bitrate, enable_ff_nv_enc, encode_preset, output_fmt,
-                out_audio_fifoname.c_str(), rawaudio.channel, rawaudio.samplerate, rtmpout, !enable_ffmpeg_stat);
+                out_audio_fifoname.c_str(), rawaudio.channel, rawaudio.samplerate, rtmpout, disable_ffmpeg_stat);
         writer_pipe = popen(cmd.c_str(), "w");
         if(!writer_pipe)
         {
@@ -1817,13 +1817,13 @@ int main(int argc, char **argv) {
                     }
                     else
                     {
-                        if (!disable_greenmatting)
+                        if (!disable_greenmatting || disable_opengl)
                         {
-                            removeBackground(frame, frame, mask);
-                            mainvideo.ctx.ftype = materialcontext::FT_BGRM;
-                        }
-                        if (disable_opengl)
-                        {
+                            if (!disable_greenmatting)
+                            {
+                                removeBackground(frame, frame, mask);
+                                mainvideo.ctx.ftype = materialcontext::FT_BGRM;
+                            }
                             OverlapImage(mainvideo, outmat, output_width, output_height, frame, mask, output_alpha);
                         }
                         else
