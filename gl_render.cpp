@@ -288,10 +288,7 @@ static bool initGLFW()
 #endif
 
 
-int gl_init_render(int dispwidth, int dispheight, bool init_chromakey, int debug,
-				   const char *scale_prefer, std::vector<std::vector<int>> &protect_areas,
-				   bool output_alpha, float matting_scale, bool enable_green_suppress,
-				   float matting_power, const char *matting_model)
+int gl_init_render(int dispwidth, int dispheight, int debug, const char *scale_prefer, bool output_alpha)
 {
 	if (debug)
 		enable_debug = 1;
@@ -541,14 +538,12 @@ int gl_render_texture_bgra(int textureId, uint8_t *buffer, int imgw, int imgh, i
 }
 
 // buffer must be bgra format
-int gl_render_texture_chromakey(int textureId, uint8_t *buffer, int channels, int imgw, int imgh, int x, int y, int w, int h, int rotation, int opacity)
+int gl_render_texture(int textureId, uint8_t *buffer, int channels, int imgw, int imgh, int x, int y, int w, int h, int rotation, int opacity)
 {
-	{
-		if (channels == 3)
-			return gl_render_texture_bgr(textureId, buffer, imgw, imgh, x, y, w, h, rotation, opacity);
-		else
-			return gl_render_texture_bgra(textureId, buffer, imgw, imgh, x, y, w, h, rotation, opacity);
-	}
+	if (channels == 3)
+		return gl_render_texture_bgr(textureId, buffer, imgw, imgh, x, y, w, h, rotation, opacity);
+	else
+		return gl_render_texture_bgra(textureId, buffer, imgw, imgh, x, y, w, h, rotation, opacity);
 }
 
 // alpha_mode:

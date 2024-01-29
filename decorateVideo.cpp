@@ -314,10 +314,6 @@ int main(int argc, char **argv) {
     bool enable_window = false;
     bool enable_ff_nv_enc = false;
     int enable_bg_color = 0;
-    bool enable_green_suppress = true;
-    float matting_power = 3; // default 3, for agressive mode, use 4
-    float matting_scale = 1; // default 1, for agressive mode, use 1.2
-    const char *matting_model = "eff"; // eff - effect or perf - performance
     const char *scale_engine = "opengl";
     const char *scale_prefer = "speed";
     const char *encode_preset = "";
@@ -345,6 +341,8 @@ int main(int argc, char **argv) {
 
     for(int i=0; i<argc; i++)
     {
+        const char *opt;
+        int optlen;
         printf("[arg %d] %s\n", i, argv[i]);
 
         if(strcasecmp(argv[i], "--disable_greenmatting")==0)
@@ -374,15 +372,6 @@ int main(int argc, char **argv) {
             --i;
             continue;
         }
-        if(strcasecmp(argv[i], "--disable_green_suppress")==0)
-        {
-            enable_green_suppress = false;
-            if(i+1 < argc)
-                memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
-            --argc;
-            --i;
-            continue;
-        }
         if(strcasecmp(argv[i], "--enable_debug")==0)
         {
             enable_debug = 1;
@@ -401,54 +390,7 @@ int main(int argc, char **argv) {
             --i;
             continue;
         }
-        const char *opt = "--matting_power=";
-        int optlen = strlen(opt);
-        if(strncasecmp(argv[i], opt, optlen)==0)
-        {
-            matting_power = (float)atof(argv[i]+optlen);
-            if (matting_power < 0.5 || matting_power > 10.0)
-            {
-                cerr << "Bad argument, invalid matting_power of " << matting_power << endl;
-                return -1;
-            }
-            if(i+1 < argc)
-                memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
-            --argc;
-            --i;
-            continue;
-        }
-        opt = "--matting_scale=";
-        optlen = strlen(opt);
-        if(strncasecmp(argv[i], opt, optlen)==0)
-        {
-            matting_scale = (float)atof(argv[i]+optlen);
-            if (matting_scale < 0.1 || matting_scale > 10.0)
-            {
-                cerr << "Bad argument, invalid matting_scale of " << matting_scale << endl;
-                return -1;
-            }
-            if(i+1 < argc)
-                memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
-            --argc;
-            --i;
-            continue;
-        }
-        opt = "--matting_model=";
-        optlen = strlen(opt);
-        if(strncasecmp(argv[i], opt, optlen)==0)
-        {
-            matting_model = argv[i]+optlen;
-            if (strncmp(matting_model, "eff", 4)!=0 && strncmp(matting_model, "perf", 5)!=0)
-            {
-                cerr << "Bad argument, invalid matting_model, must be eff or perf" << endl;
-                return -1;
-            }
-            if(i+1 < argc)
-                memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
-            --argc;
-            --i;
-            continue;
-        }
+
         opt = "--encode_preset=";
         optlen = strlen(opt);
         if(strncasecmp(argv[i], opt, optlen)==0)
@@ -906,38 +848,6 @@ int main(int argc, char **argv) {
             continue;
         }
 
-        opt = "--protect_areas=";
-        optlen = strlen(opt);
-        if(strncasecmp(argv[i], opt, optlen)==0)
-        {
-            std::vector<char *> strs = splitCString(argv[i]+optlen, ',');
-            for(int idx=0; idx<strs.size(); idx++)
-            {
-                char *val = strs[idx];
-                std::vector<char *> sub_strs = splitCString(strs[idx], ':');
-                if (sub_strs.size() != 4)
-                {
-                    std::cerr << "Invalid protect areas" << std::endl;
-                    return -1;
-                }
-                int y = atoi(sub_strs[0]), // top
-                    x = atoi(sub_strs[1]), // left
-                    w = atoi(sub_strs[2]), // width
-                    h = atoi(sub_strs[3]); // height
-                if (w <=0 || h <=0)
-                {
-                    std::cerr << "Invalid protect areas, w/h should not be zero" << std::endl;
-                    return -1;
-                }
-                protect_areas.push_back({x, y, w, h});
-            }
-
-            if(i+1 < argc)
-                memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
-            --argc;
-            --i;
-            continue;
-        }
         // command line backward compatible
         opt = "--";
         optlen = strlen(opt);
@@ -951,12 +861,6 @@ int main(int argc, char **argv) {
             --i;
             continue;
         }
-    }
-
-    if(protect_areas.size() && disable_greenmatting)
-    {
-        std::cerr << "Warning: protect_areas will be ignored as disable_greenmatting is set." << std::endl;
-        protect_areas.clear();
     }
 
     if(alpha_video) // no greenmatting on alpha video
@@ -1259,24 +1163,10 @@ int main(int argc, char **argv) {
     // signal(SIGSEGV, sig_handler); // let the system generate coredump
     signal(SIGUSR1, sig_handler);
 
-    if (protect_areas.size() && ffreader && (strncasecmp(scale_engine, "ffmpeg", 6)==0 || strncasecmp(scale_engine, "opencv", 6)==0))
-    {
-        // also scale protect_areas
-        double x_ratio = ((double)mainvideo.rect.width) / ffreader->width;
-        double y_ratio = ((double)mainvideo.rect.height) / ffreader->height;
-        for (auto &a : protect_areas)
-        {
-            a[0] = a[0] * x_ratio;
-            a[1] = a[1] * y_ratio;
-            a[2] = a[2] * x_ratio;
-            a[3] = a[3] * y_ratio;
-        }
-    }
-
     if (!disable_opengl)
     {
         const char *gl_prefer = strncasecmp(scale_engine, "opengl", 6)==0? scale_prefer : "speed";
-        int r = gl_init_render(output_width, output_height, !disable_greenmatting, enable_debug, gl_prefer, protect_areas, output_alpha, matting_scale, enable_green_suppress, matting_power, matting_model);
+        int r = gl_init_render(output_width, output_height, enable_debug, gl_prefer, output_alpha);
         if (r)
         {
             remove(out_audio_fifoname.c_str());
@@ -1821,6 +1711,7 @@ int main(int argc, char **argv) {
                         {
                             if (!disable_greenmatting)
                             {
+                                AUTOTIMED("Remove background run", (enable_debug || first_run));
                                 removeBackground(frame, frame, mask);
                                 mainvideo.ctx.ftype = materialcontext::FT_BGRM;
                             }
@@ -1829,8 +1720,8 @@ int main(int argc, char **argv) {
                         else
                         {
                             // always redraw mainvideo
-                            AUTOTIMED("Render chromakey run", first_run);
-                            mainvideo.ctx.glTexture = gl_render_texture_chromakey(mainvideo.ctx.glTexture, frame.data, frame.channels(), frame.cols, frame.rows, 
+                            AUTOTIMED("Render mainvideo run", (enable_debug || first_run));
+                            mainvideo.ctx.glTexture = gl_render_texture(mainvideo.ctx.glTexture, frame.data, frame.channels(), frame.cols, frame.rows, 
                                     mainvideo.rect.x, mainvideo.rect.y, mainvideo.rect.width, mainvideo.rect.height, mainvideo.rotation, mainvideo.opacity);
                         }
                     }
@@ -1843,7 +1734,6 @@ int main(int argc, char **argv) {
                     pmat = read_next_frame(m, ts, disable_opengl);
                     if(!pmat || pmat->empty())
                     {
-                    //    cerr << "Error reading frame from material " << m.path << endl;
                         continue;
                     }
                 }
