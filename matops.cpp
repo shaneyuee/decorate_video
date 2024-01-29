@@ -3,8 +3,8 @@
 #include "matops.h"
 #include "AutoTime.h"
 #include "material.h"
-#ifdef CentOS
-#define ICV_BASE 1
+#if defined(CentOS) && defined(__x86_64__)
+#define ICV_BASE
 #include "iw/iw_core.h"
 #include "iw/iw_image.h"
 #include "iw/iw_image_transform.h"
@@ -807,7 +807,7 @@ cv::Mat RotateMat(cv::Mat mat, cv::Point &pos, int degree)
     if ((degree % 90)==0)
         return RotateMat90d(mat, pos, degree);
 
-#ifdef CentOS
+#if defined(CentOS) && defined(__x86_64__)
     // Use Intel's IPP lib, very fast for image processing in CPU
     IwiImage iwiSrc, iwiDst;
     iwiImage_Init(&iwiSrc);

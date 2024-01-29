@@ -1,29 +1,18 @@
 cmake_minimum_required(VERSION 3.20)
 project(decorateVideo)
 
+
+
+
 set(CMAKE_CXX_STANDARD 11)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 3)
 set(VERSION_PATCH 9)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_FLAG}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_FLAG} -std=c++11 -pthread -fPIC")
-
-find_package(Git REQUIRED)
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} branch --show-current
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_REV
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+set(C_FLAGS "-g -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_FLAG} ${C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_FLAG} ${C_FLAGS} -std=c++11 -pthread -fPIC")
 
 string(TIMESTAMP BUILD_TIME %y%m%d_%H%M%S)
 configure_file ("./version.h.in" "./version.h")
@@ -32,13 +21,20 @@ if (POLICY CMP0072)
   set(OpenGL_GL_PREFERENCE LEGACY)
 endif()
 
-set(LINUX_BRANCH "centos")
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
+  set(X64 TRUE)
+endif()
+
 if (APPLE)
   set(MacOS TRUE)
   message(STATUS "MacOS")
 elseif(LINUX)
   set(CentOS TRUE)
-  message(STATUS "CentOS")
+  if (X64)
+    message(STATUS "CentOS x86_64")
+  else()
+    message(STATUS "CentOS other")
+  endif()
 else()
   message(FATAL_ERROR "Unsupported platform")
 endif()
@@ -94,7 +90,7 @@ include_directories(${FFMPEG_INCLUDE_DIRS})
 
 if (CentOS)
   add_definitions(-DCentOS)
-  set(ffmpeg_LIBS avformat avfilter avcodec avutil swresample swscale x264 webpdemux webpmux webp webpdecoder sharpyuv imageio_util opus wavpack vpx postproc ass fontconfig harfbuzz fribidi unibreak mp3lame)
+  set(ffmpeg_LIBS avformat avfilter avcodec avutil swresample swscale x264 webpdemux webpmux webp webpdecoder sharpyuv opus wavpack vpx postproc ass fontconfig harfbuzz fribidi unibreak mp3lame)
 endif()
 
 find_package(OpenGL REQUIRED)
@@ -113,6 +109,11 @@ add_subdirectory(filter)
 
 if (CentOS)
   add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+  if (X64)
+    include_directories(3rd/ippiw/include)
+    link_directories(3rd/ippiw/lib 3rd/ippiw/lib/intel64)
+    link_libraries(ippiw ippicv)
+  endif()
 endif()
 
 include_directories(3rd/log)
