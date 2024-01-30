@@ -1,3 +1,6 @@
+##Introduction
+decorate_video is a command line tool for decorating videos (file or streaming) with images, sub-videos and other materials such as texts, subtitles, etc. It supports a lot of useful functions such as dynamically changing materials by fifo commands, left-right/top-down video with gray alpha images, webm videos, and so on, you can run ./decorateVideo with no arguments to see all available command line options.
+
 
 ##Installing dependencies
 
@@ -20,5 +23,5 @@ https://www.johnvansickle.com/ffmpeg/old-releases/ffmpeg-5.1.1-i686-static.tar.x
 ##Run example
 
 ```
-./decorateVideo --disable_opengl --blind_watermark=text:TEST:5 out.mp4:1080:1920 mainvideo:1:intro.mp4:0:0:1080:1920:100:0:0
+./decorateVideo --disable_opengl out.mp4:1080:1920 mainvideo:1:intro.mp4:0:0:1080:1920
 ```
