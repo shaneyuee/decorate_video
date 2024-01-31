@@ -64,7 +64,6 @@ void DumpTraceback(int signal) {
     int nptrs = backtrace(buffer, size);
     printf("backtrace() returned %d address\n", nptrs);
 
-    // backtrace_symbols函数不可重入， 可以使用backtrace_symbols_fd替换
     strings = backtrace_symbols(buffer, nptrs);
     if (strings) {
         for (int i = 0; i < nptrs; ++i) {
@@ -201,20 +200,18 @@ int main(int argc, char **argv) {
         std::cout << std::endl;
         std::cout << "Available options: " << std::endl;
         std::cout << "  --bg_color=#ffaabb                    # set background color to #ffaabb" << std::endl;
-        std::cout << "  --disable_greenmatting                # skip removing green matting" << std::endl;
-        std::cout << "  --disable_green_suppress              # disable green color suppression in green matting SDK" << std::endl;
-        std::cout << "  --matting_scale=<scale>               # set green matting scale, > 0.1, default 1, agressive use 1.2" << std::endl;
-        std::cout << "  --matting_power=<pow>                 # set green matting power, 1-10, default 1.5, agressive use 3" << std::endl;
-        std::cout << "  --matting_model=eff|perf              # prefer effect or performance, default is effect" << std::endl;
-        std::cout << "  --disable_opengl                      # disable opengl rendering" << std::endl;
+        std::cout << "  --enable_chromakeying                 # enable chroma keying (removing green background) on mainvideo, for test purposes only," << std::endl;
+        std::cout << "                                        # for product use, please use professional software such as Premiere Pro and pruduce left-right or webm video" << std::endl;
+        std::cout << "  --disable_opengl                      # disable opengl rendering, run in pure CPU mode" << std::endl;
         std::cout << "  --enable_window                       # display the preview window while processing" << std::endl;
         std::cout << "  --enable_debug                        # output debug message while processing" << std::endl;
         std::cout << "  --enable_ff_nv_enc                    # enable hw encode for nvidia driver, only for mp4 file output" << std::endl;
-        std::cout << "  --data_dir=<data_dir>                 # set root data dir" << std::endl;
+        std::cout << "  --data_dir=<data_dir>                 # set root data dir for all path parameters" << std::endl;
         std::cout << "  --log_file=<path>                     # set log/error file to <path>_log.txt and <path>_err.txt, default to stdout/stderr" << std::endl;
         std::cout << "  --scale_engine=ffmpeg|opengl|opencv   # set scale lib, default is opengl" << std::endl;
         std::cout << "  --scale_prefer=quality|speed|both     # set scale preference, default is both" << std::endl;
-        std::cout << "  --video_size=<width>x<height>         # rescale output video size to width x height" << std::endl;
+        std::cout << "  --video_size=<width>x<height>         # rescale the decorated video to size width x height" << std::endl;
+        std::cout << "                                        # note that all materials' size parameters are with reference to width/height specified in output_video parameters" << std::endl;
         std::cout << "  --encode_preset=slow|medium|fast      # set encode preset" << std::endl;
         std::cout << "  --alpha_video=left|right|top|bottom   # auto detect alpha video in mainvideo" << std::endl;
         std::cout << "  --alpha_egine=opengl|opencv           # set engine used to process alpha video" << std::endl;
@@ -226,7 +223,6 @@ int main(int argc, char **argv) {
         std::cout << "                                        #    dwType:   4 bytes, host order, 1 - video(ExtHeader=4byte, image index); 2 - audio(no ExtHeader)" << std::endl;
         std::cout << "                                        #    dwLength: 4 bytes, host order, packet length or length of acValue" << std::endl;
         std::cout << "                                        #    acValue:  dwLength bytes, video or audio packet data" << std::endl;
-        std::cout << "  --protect_areas=y1:x1:w1:h1;y2:x2:w2:h2;...   # green screen protect areas, y-top, x-left, w-width, h-height" << std::endl;
         std::cout << "  --stream_out=protocol://proto_spec    # protocol can be rtmp, this option must be use with - output filename" << std::endl;
         std::cout << "                                        # for rtmp rtmp://server/url/streamname" << std::endl;
         std::cout << "  --substream_out=protocol://proto_spec:<width>:<height>:<framerate>:<bitrate>:<disable_audio(0|1)> # support a sub stream output, currently only support rtmp" << std::endl;
@@ -254,7 +250,7 @@ int main(int argc, char **argv) {
         std::cout << "  --subtitle=file:top:left:width:height:style  # set subtitle file, position and style (ffmpeg subtitles:force_style)" << std::endl;
         std::cout << "                                        # see https://www.myzhenai.com.cn/post/4153.html for force_style" << std::endl;
         std::cout << "  --use_ffmpeg=file                     # use ffmpeg program file, default is /var/local/decorate_video/ffmpeg" << std::endl;
-        std::cout << "  --disable_ffmpeg_stat                  # disable ffmpeg statistic output" << std::endl;
+        std::cout << "  --disable_ffmpeg_stat                 # disable ffmpeg statistic output" << std::endl;
         std::cout << "  --blind_watermark=<type(text|image)>:<text|image_path>:<interval>" << std::endl;
         std::cout << "                                        # set blind water mark, parameters:" << std::endl;
         std::cout << "                                        #      type: text or image as water mark" << std::endl;
@@ -268,7 +264,7 @@ int main(int argc, char **argv) {
         std::cout << "    - width/height: the output video's width/height, must be specified." << std::endl;
         std::cout << "    - framerate: optional, frames per second, default to main video's fps" << std::endl;
         std::cout << "    - bitrate: optional, bits per second, default to main video's bitrate" << std::endl;
-        std::cout << "    - fmt: one of {mp4, mp4alpha, mov, webm, raw1, raw2}, default is mp4" << std::endl;
+        std::cout << "    - fmt: one of {mp4, mp4alpha, mov, webm, raw24, raw32}, default is mp4" << std::endl;
         std::cout << "         - mp4: libx264(yuv420p) + aac encoding" << std::endl;
         std::cout << "         - mp4alpha: mp4 with right-side(1080x1920) or bottom-side(1920x1080) alpha video" << std::endl;
         std::cout << "         - mov: qtrle(argb with alpha) + aac encoding, *** caution: very very large!" << std::endl;
@@ -309,7 +305,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    bool disable_greenmatting = false;
+    bool enable_chromakeying = false;
     bool disable_opengl = false;
     bool enable_window = false;
     bool enable_ff_nv_enc = false;
@@ -327,7 +323,6 @@ int main(int argc, char **argv) {
     rawaudioinfo rawaudio = { .aud_fmt=NULL, .channel=1, .samplerate=48000 }; // default output channel/sample_rate
     const char *rtmpout = NULL;
     const char *event_fifo = NULL;
-    std::vector<std::vector<int>> protect_areas; // vector of vector(x, y, w, h)
     watermark water = {NULL};
     std::shared_ptr<IWaterMark> blind_watermark = nullptr;
     const char *use_ffmpeg = NULL;
@@ -345,9 +340,9 @@ int main(int argc, char **argv) {
         int optlen;
         printf("[arg %d] %s\n", i, argv[i]);
 
-        if(strcasecmp(argv[i], "--disable_greenmatting")==0)
+        if(strcasecmp(argv[i], "--enable_chromakeying")==0)
         {
-            disable_greenmatting = true;
+            enable_chromakeying = true;
             if(i+1 < argc)
                 memmove(argv+i, argv+i+1, (argc-i-1)*sizeof(argv));
             --argc;
@@ -864,7 +859,7 @@ int main(int argc, char **argv) {
     }
 
     if(alpha_video) // no greenmatting on alpha video
-        disable_greenmatting = true;
+        enable_chromakeying = false;
 
     string ffmpeg = use_ffmpeg? std::string(use_ffmpeg) : get_ffmpeg_path();
     if(ffmpeg.empty())
@@ -1052,7 +1047,7 @@ int main(int argc, char **argv) {
                 return -1;
             }
         }
-        disable_greenmatting = 1;
+        enable_chromakeying = false;
     }
     totalframes = duration / (1000.0 / fps);
     printf("output video fps : %d, total frames: %lld\n", fps, (long long)totalframes);
@@ -1492,7 +1487,6 @@ int main(int argc, char **argv) {
 
         AUTOTIMED("Frame handling total run", enable_debug);
         Mat frame, mask;
-        int image_index = -1;
         int prodid = 0; // new product id
         std::vector<unsigned char> main_vdata, main_adata;
         // if main video is from shm, it is AI frame and possibly is delay, so set can_wait = true
@@ -1513,7 +1507,7 @@ int main(int argc, char **argv) {
                 {
                     use_old = false;
                     std::vector<unsigned char> adata;
-                    int ret = read_thread_merge_data(ffreader, main_vdata, adata, image_index, prodid, can_wait? 1 : 0);
+                    int ret = read_thread_merge_data(ffreader, main_vdata, adata, prodid, can_wait? 1 : 0);
                     if (ret < 0 || (can_wait && ret == 1 && timeout_num>=read_timeout))
                     {
                         auto estr = string("Read mainvideo ") + (ret > 0? "timeout" : "error");
@@ -1556,7 +1550,7 @@ int main(int argc, char **argv) {
             else
             {
                 std::vector<unsigned char> adata;
-                int ret = read_thread_merge_data(ffreader, main_vdata, adata, image_index, prodid, can_wait? 1 : 0);
+                int ret = read_thread_merge_data(ffreader, main_vdata, adata, prodid, can_wait? 1 : 0);
                 if (ret < 0 || (can_wait && ret == 1 && timeout_num>=read_timeout))
                 {
                     auto estr = string("Read mainvideo ") + (ret > 0? "timeout" : "error");
@@ -1591,10 +1585,6 @@ int main(int argc, char **argv) {
                 {
                     AUTOTIMED("FFMPEG convert alpha image", enable_debug);
                     frame = MakeAlphaMat(frame, alpha_video[0], NULL);
-                }
-                if(image_index >= 0) // convert frame into brga with alpha
-                {
-                    // not yet supported
                 }
                 if(((mainvideo.rotation%360)==0 && (mainvideo.opacity<=0 || mainvideo.opacity>=100)) && 
                     strncasecmp(scale_engine, "opencv", 6)==0 && // scale with opencv
@@ -1707,9 +1697,9 @@ int main(int argc, char **argv) {
                     }
                     else
                     {
-                        if (!disable_greenmatting || disable_opengl)
+                        if (enable_chromakeying || disable_opengl)
                         {
-                            if (!disable_greenmatting)
+                            if (enable_chromakeying)
                             {
                                 AUTOTIMED("Remove background run", (enable_debug || first_run));
                                 removeBackground(frame, frame, mask);
@@ -1856,7 +1846,7 @@ int main(int argc, char **argv) {
                 {
                     cv::Mat subMat;
                     cv::resize(base, subMat, cv::Size(substream_out.videoinfo.w, substream_out.videoinfo.h), 0, 0, cv::INTER_NEAREST);
-                    substream_out.video_thread->Write(subMat.data, subMat.rows*subMat.cols*subMat.channels(), EC_RAWMEDIA_RAWVIDEO, substream_out.cur_frameno);
+                    substream_out.video_thread->Write(subMat.data, subMat.rows*subMat.cols*subMat.channels(), EC_RAWMEDIA_RAWVIDEO);
                     substream_out.cur_frameno ++;
                 }
             }
@@ -1868,7 +1858,7 @@ int main(int argc, char **argv) {
                     AUTOTIMED("CV::Convert YUV run", (enable_debug || first_run));
                     cv::cvtColor(base, yuv, COLOR_BGR2YUV_I420);
                 }
-                ffVideoEncodeThread.Write(yuv.data, yuv.rows*yuv.cols, EC_RAWMEDIA_RAWVIDEO, num);
+                ffVideoEncodeThread.Write(yuv.data, yuv.rows*yuv.cols, EC_RAWMEDIA_RAWVIDEO);
             }
             else // write yuv420p/bgra data to ffmpeg fifo
             {
@@ -1905,7 +1895,7 @@ int main(int argc, char **argv) {
                 }
                 int channels = keep_alpha? 4:3;
                 ffVideoEncodeThread.Write(newMat.data, newMat.rows*newMat.cols*channels,
-                                rawdata_out? EC_RAWMEDIA_VIDEO:EC_RAWMEDIA_RAWVIDEO, num);
+                                rawdata_out? EC_RAWMEDIA_VIDEO:EC_RAWMEDIA_RAWVIDEO);
             }
         } // if (!frame.empty())
         else
@@ -2010,7 +2000,7 @@ int main(int argc, char **argv) {
                     substream_out.audio_thread->Write(mixed_audio.data(), mixed_audio.size());
                 }
                 if(rawdata_out)
-                    ffVideoEncodeThread.Write(mixed_audio.data(), mixed_audio.size(), EC_RAWMEDIA_AUDIO, 0);
+                    ffVideoEncodeThread.Write(mixed_audio.data(), mixed_audio.size(), EC_RAWMEDIA_AUDIO);
                 else
                     ffAudioEncodeThread.Write(mixed_audio.data(), mixed_audio.size());
             }

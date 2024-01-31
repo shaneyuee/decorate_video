@@ -798,12 +798,11 @@ int decode_video_frame(FFReader *video, AVPacket *packet, std::vector<uint8_t> *
 
 
 
-int read_rawvideo_frame(FFReader *video, std::vector<unsigned char> **buffer, int &image_index)
+int read_rawvideo_frame(FFReader *video, std::vector<unsigned char> **buffer)
 {
     *buffer = NULL;
     MsgHead header = { 0 };
-    ExtMsgHead extheader = { -1 };
-    ExtMsgHeadExtAudio extaudioheader = { -1, 0 };
+    ExtMsgHeadExtAudio extaudioheader = { 0 };
 
     while(video->aud_fmt) // buffer all raw audio at video->rawAudio until one video frame is encountered
     {
@@ -831,17 +830,6 @@ int read_rawvideo_frame(FFReader *video, std::vector<unsigned char> **buffer, in
             if (header.len != video->framesize) // video
             {
                 LOG_ERROR("Error: bad header video length, expect %d, got %d!", video->framesize, header.len);
-                return -1;
-            }
-            AUTOTIMED("[rawvideo] read ext header, size: 4", STAT_RUNTIME);
-            if (fread(&extheader, sizeof(extheader), 1, video->fraw) != 1)
-            {
-                if (feof(video->fraw))
-                {
-                    LOG_INFO("eof occur.");
-                    return 0;
-                }
-                fprintf(stderr, "Failed to read rawvideo ext-header, err=%d:%s\n", errno, strerror(errno));
                 return -1;
             }
             break;
@@ -905,9 +893,6 @@ int read_rawvideo_frame(FFReader *video, std::vector<unsigned char> **buffer, in
         }
     }
 
-    // -1 if not available
-    image_index = extheader.image_index;
-
     if (video->pix_fmt == video->out_pix_fmt && video->width == video->disp_width && video->height == video->disp_height)
     {
         *buffer = &video->rawBuffer;
@@ -938,8 +923,7 @@ int read_rawvideo_frame(FFReader *video, std::vector<unsigned char> **buffer, in
 static int read_rawaudio_frame(FFReader *video, int max_length)
 {
     MsgHead header = { 0 };
-    ExtMsgHead extvideoheader = { -1 };
-    ExtMsgHeadExtAudio extaudioheader = { -1, 0 };
+    ExtMsgHeadExtAudio extaudioheader = { 0 };
 
     while(video->aud_fmt) // buffer all raw audio at video->rawAudio until one video frame is encountered
     {
@@ -964,20 +948,7 @@ static int read_rawaudio_frame(FFReader *video, int max_length)
         }
         if (header.type == EC_RAWMEDIA_VIDEO) // read video and discard
         {
-            LOG_ERROR("Warning: read_rawaudio_frame() encounters video, read and discard!");
-            {
-            AUTOTIMED("[rawaudio] read ext video header, size: 4", STAT_RUNTIME);
-            if (fread(&extvideoheader, sizeof(extvideoheader), 1, video->fraw) != 1)
-            {
-                if (feof(video->fraw))
-                {
-                    LOG_INFO("eof occur.");
-                    break;
-                }
-                LOG_ERROR("Failed to read rawaudio ext video header, err=%d:%s", errno, strerror(errno));
-                return -1;
-            }
-            }{
+            LOG_ERROR("Warning: read_rawaudio_frame() encounters video, read and discard!");{
             AUTOTIMED(("[rawaudio] read video body size: "+std::to_string(header.len)).c_str(), STAT_RUNTIME);
             video->rawBuffer.resize(header.len);
             if (fread(video->rawBuffer.data(), header.len, 1, video->fraw) != 1)
@@ -1012,7 +983,7 @@ static int read_rawaudio_frame(FFReader *video, int max_length)
         }
         if (extaudioheader.product_id != video->product_id) // switch product, clear buffer
         {
-            LOG_ERROR("Switching product from %d to %d, audio_index=%d", video->product_id, extaudioheader.product_id, extaudioheader.audio_index);
+            LOG_ERROR("Switching product from %d to %d", video->product_id, extaudioheader.product_id);
             video->product_id = extaudioheader.product_id;
             video->rawBuffer.clear();
             video->audio_size = 0;
@@ -1044,11 +1015,10 @@ static int read_rawaudio_frame(FFReader *video, int max_length)
     return 0;
 }
 
-int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer, int &image_index)
+int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer)
 {
     *buffer = NULL;
     MsgHead *header = NULL;
-    ExtMsgHead *extvideoheader = NULL;
     ExtMsgHeadExtAudio *extaudioheader = NULL;
     static std::vector<unsigned char> rawdata(32*1024*1024);
     int length = 0;
@@ -1083,7 +1053,6 @@ int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer
                 LOG_ERROR("Error: bad video length in shm(path=%s), expect %d, got %d!", video->filename.c_str(), video->framesize, length);
                 return -1;
             }
-            extvideoheader = NULL;
             unsigned char *data = rawdata.data();
             memcpy(video->rawBuffer.data(), data, video->framesize);
             break;
@@ -1108,13 +1077,12 @@ int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer
                 LOG_ERROR("Error: bad header video length in shm(path=%s), expect %d, got %d!", video->filename.c_str(), video->framesize, header->len);
                 return -1;
             }
-            if (length < sizeof(MsgHead) + sizeof(ExtMsgHead) + header->len)
+            if (length < sizeof(MsgHead) + header->len)
             {
-                LOG_ERROR("Error: bad packet length for video, expect %d, got %d", sizeof(MsgHead) + sizeof(ExtMsgHead) + header->len, length);
+                LOG_ERROR("Error: bad packet length for video, expect %d, got %d", sizeof(MsgHead) + header->len, length);
                 return -1;
             }
-            extvideoheader = (ExtMsgHead *)(rawdata.data()+sizeof(MsgHead));
-            unsigned char *data = rawdata.data()+sizeof(MsgHead)+sizeof(ExtMsgHead);
+            unsigned char *data = rawdata.data()+sizeof(MsgHead);
             memcpy(video->rawBuffer.data(), data, video->framesize);
             break;
         }
@@ -1152,9 +1120,6 @@ int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer
         }
     }
 
-    // -1 if not available
-    image_index = extvideoheader? extvideoheader->image_index : -1;
-
     if (video->pix_fmt == video->out_pix_fmt && video->width == video->disp_width && video->height == video->disp_height)
     {
         *buffer = &video->rawBuffer;
@@ -1185,7 +1150,6 @@ int read_rawvideo_frame_shm(FFReader *video, std::vector<unsigned char> **buffer
 static int read_rawaudio_frame_shm(FFReader *video, int max_length)
 {
     MsgHead *header = NULL;
-    ExtMsgHead *extvideoheader = NULL;
     ExtMsgHeadExtAudio *extaudioheader = NULL;
     static std::vector<unsigned char> rawdata(32*1024*1024);
     int length = 0;
@@ -1275,7 +1239,7 @@ static int read_rawaudio_frame_shm(FFReader *video, int max_length)
 }
 
 
-int read_video_frame(FFReader *video, std::vector<unsigned char> **buffer, int &raw_image_index)
+int read_video_frame(FFReader *video, std::vector<unsigned char> **buffer)
 {
     if (!video->decode_video)
     {
@@ -1288,17 +1252,15 @@ int read_video_frame(FFReader *video, std::vector<unsigned char> **buffer, int &
     {
         int ret;
         if (video->fraw)
-            ret = read_rawvideo_frame(video, buffer, raw_image_index);
+            ret = read_rawvideo_frame(video, buffer);
         else
-            ret = read_rawvideo_frame_shm(video, buffer, raw_image_index);
+            ret = read_rawvideo_frame_shm(video, buffer);
         if (ret >= 0 && *buffer)
         {
             video->update_time.store(time(NULL));
         }
         return ret;
     }
-
-    raw_image_index = -1;
 
     // get from buffers
     if (video->buffers.size())
@@ -1831,7 +1793,6 @@ bool check_video_has_audio_stream(const char *file)
 
 struct RawFrame
 {
-    int image_index;
     int product_id;
     int reopen_time;
     std::vector<unsigned char> video_data;
@@ -1840,7 +1801,6 @@ struct RawFrame
 
 struct RawVFrame
 {
-    int image_index;
     std::vector<unsigned char> video_data;
 };
 
@@ -1959,7 +1919,6 @@ public:
             aQueue.Clear();
             last_frame.audio_data.clear();
             last_frame.video_data.clear();
-            last_frame.image_index = -1;
             last_frame.product_id = 0;
         }
     }
@@ -1971,7 +1930,6 @@ public:
         bEOF.store(false);
         cache_mode = mode;
         floor_size = floor;
-        last_frame.image_index = -1;
         last_frame.product_id = 0;
         last_frame.reopen_time = 0;
         last_frame.audio_data.clear();
@@ -2079,20 +2037,16 @@ int cache_video_data(FFVideoDecodeThread *decoder, int frame_num)
     {
         while (!decoder->bExit && decoder->videoQueue.Size() < frame_num)
         {
-            struct RawFrame data = {0, 0, 0, std::vector<unsigned char>(), std::vector<unsigned char>()};
-            int image_index = 0;
+            struct RawFrame data = {0, 0, std::vector<unsigned char>(), std::vector<unsigned char>()};
             std::vector<unsigned char> *buffer = NULL;
-            int ret = read_video_frame(video, &buffer, image_index);
+            int ret = read_video_frame(video, &buffer);
             if (ret < 0)
             {
                 return ret;
             }
 
             if (buffer)
-            {
                 data.video_data = *buffer;
-                data.image_index = image_index;
-            }
 
             if (video->decode_audio && (video->decode_video==false || data.video_data.size()))
             {
@@ -2142,26 +2096,23 @@ int cache_video_data(FFVideoDecodeThread *decoder, int frame_num)
             {
                 do
                 {
-                    struct RawVFrame data = {0, std::vector<unsigned char>()};
-                    int image_index = 0;
+                    struct RawVFrame data = {std::vector<unsigned char>()};
                     std::vector<unsigned char> *buffer = NULL;
-                    int ret = read_video_frame(video, &buffer, image_index);
+                    int ret = read_video_frame(video, &buffer);
                     if (ret < 0)
                         return ret;
                     if (!buffer)
                         break;
                     data.video_data = *buffer;
-                    data.image_index = image_index;
                     decoder->vQueue.PushMove(std::move(data));
                 }
                 while (video->buffers.size());
             }
             else
             {
-                struct RawVFrame data = {0, std::vector<unsigned char>()};
-                int image_index = 0;
+                struct RawVFrame data = {std::vector<unsigned char>()};
                 std::vector<unsigned char> *buffer = NULL;
-                int ret = read_video_frame(video, &buffer, image_index);
+                int ret = read_video_frame(video, &buffer);
                 if (ret < 0)
                 {
                     return ret;
@@ -2179,7 +2130,6 @@ int cache_video_data(FFVideoDecodeThread *decoder, int frame_num)
                 if (buffer)
                 {
                     data.video_data = *buffer;
-                    data.image_index = image_index;
                     decoder->vQueue.PushMove(std::move(data));
                 }
                 else
@@ -2256,7 +2206,7 @@ int cache_video_data(FFVideoDecodeThread *decoder, int frame_num)
 }
 
 // Read mainvideo/rawvideo's data, includeing video frame and corresponding audio data
-int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, std::vector<unsigned char> &adata, int &raw_image_index, int &product_id, int timeout_sec)
+int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, std::vector<unsigned char> &adata, int &product_id, int timeout_sec)
 {
     auto it = decodermap.find(video);
     if (it == decodermap.end()) // not started?
@@ -2283,7 +2233,6 @@ int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, s
         {
             vdata = std::move(raw.video_data);
             adata = std::move(raw.audio_data);
-            raw_image_index = raw.image_index;
             product_id = raw.product_id;
             return 0;
         }
@@ -2308,7 +2257,7 @@ int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, s
     return 1;
 }
 
-int read_thread_separate_video_frame(FFReader *video, std::vector<unsigned char> &buffer, int &raw_image_index, int timeout_sec)
+int read_thread_separate_video_frame(FFReader *video, std::vector<unsigned char> &buffer, int timeout_sec)
 {
     auto it = decodermap.find(video);
     if (it == decodermap.end()) // not started?
@@ -2329,7 +2278,6 @@ int read_thread_separate_video_frame(FFReader *video, std::vector<unsigned char>
         if (decoder->vQueue.PopMove(raw, timeout_sec? 1000 : 0))
         {
             buffer = std::move(raw.video_data);
-            raw_image_index = raw.image_index;
             return 0;
         }
 
@@ -2396,7 +2344,7 @@ int read_thread_separate_audio_frame(FFReader *video, std::vector<unsigned char>
     return 1;
 }
 
-int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> **buffer, int &raw_image_index)
+int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> **buffer)
 {
     auto it = decodermap.find(video);
     if (it == decodermap.end()) // not started?
@@ -2443,10 +2391,8 @@ int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> *
         if (raw.video_data.empty()) // no video in frame
             continue;
 
-        decoder->last_frame.image_index = raw.image_index;
         decoder->last_frame.video_data = std::move(raw.video_data);
         *buffer = &decoder->last_frame.video_data;
-        raw_image_index = decoder->last_frame.image_index;
         return 0;
     }
 
@@ -2458,7 +2404,6 @@ int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> *
         return 0;
     }
     *buffer = &decoder->last_frame.video_data;
-    raw_image_index = decoder->last_frame.image_index;
     return 0;
 }
 

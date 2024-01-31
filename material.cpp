@@ -945,8 +945,7 @@ cv::Mat *read_next_frame(material &m, double ts, bool disable_opengl)
         if (m.ctx.frames.size()==0) // not yet read
         {
             std::vector<unsigned char> *buffer = NULL;
-            int raw_frame_index = -1;
-            int ret = read_thread_stream_video_frame(m.ctx.reader, &buffer, raw_frame_index);
+            int ret = read_thread_stream_video_frame(m.ctx.reader, &buffer);
             if(ret < 0)
             {
                 char errbuf[128];
@@ -982,8 +981,7 @@ cv::Mat *read_next_frame(material &m, double ts, bool disable_opengl)
             {
                 use_old = false;
                 std::vector<unsigned char> *buffer = NULL;
-                int raw_frame_index = -1;
-                int ret = read_thread_stream_video_frame(m.ctx.reader, &buffer, raw_frame_index);
+                int ret = read_thread_stream_video_frame(m.ctx.reader, &buffer);
                 if(ret < 0)
                 {
                     char errbuf[128];

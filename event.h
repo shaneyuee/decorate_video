@@ -29,19 +29,12 @@ enum MsgCommand
     EC_RAWMEDIA_RAWVIDEO = 0, // video with no header
     EC_RAWMEDIA_VIDEO = 1,
     EC_RAWMEDIA_AUDIO = 2,
-    EC_RAWMEDIA_AI_INFER_AUDIO = 10, // audio with slice info
-    EC_RAWMEDIA_EXT_AUDIO = 11,      // audio with slice and product info, used for mainaudio+rawaudio
+    EC_RAWMEDIA_EXT_AUDIO = 3, // audio with product id, for dynamically switching products, used in mainaudio+rawaudio
 
     // event channel
-    EC_EVENT_AI = 4,
     EC_EVENT_DECORATE_SDK = 5,
-    EC_EVENT_RTC_SDK = 6,
 
     // command channel
-    EC_CMD_CLEAR_AUDIO_BUFFER = 3,
-    EC_CMD_STOP_AI_INFER = 7,
-    EC_CMD_STOP_DECORATE = 8,
-    EC_CMD_STOP_RTC_PUSH = 9,
     EC_CMD_ADD_MATERIAL = 12,  // add realtime material for streaming
     EC_CMD_DEL_MATERIAL = 13,  // delete realtime material
     EC_CMD_MOD_MATERIAL = 14,  // modify realtime material
@@ -56,14 +49,8 @@ struct MsgHead
     int len;
 };
 
-struct ExtMsgHead // for Video (type == 1)
-{
-    int image_index; // for type==1(video) only, image index in video stream
-};
-
 struct ExtMsgHeadExtAudio // for ext audio (type == 11)
 {
-    int audio_index;
     int product_id;
 };
 

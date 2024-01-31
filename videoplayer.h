@@ -82,7 +82,7 @@ FFReader *new_video_reader(const char *filename, bool decode_video, bool decode_
 int open_video_reader(FFReader *video);
 
 // Read a frame in BGRA format
-int read_video_frame(FFReader *video, std::vector<unsigned char> **buffer, int &raw_image_index);
+int read_video_frame(FFReader *video, std::vector<unsigned char> **buffer);
 // Read audio data of up to max_length size, read all in buffer if max_length == 0
 int read_audio_data(FFReader *video, std::vector<unsigned char> &buffer, int max_length);
 
@@ -133,18 +133,18 @@ int start_video_decoder_thread(FFReader *video, CacheMode mode, int floor);
 int stop_video_decoder_thread(FFReader *video, CacheMode mode, int floor);
 
 // Read video data, includeing video frame and corresponding audio data, should be started with AV_TOGETHER mode
-int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, std::vector<unsigned char> &adata, int &raw_image_index, int &product_id, int timeout_sec);
+int read_thread_merge_data(FFReader *video, std::vector<unsigned char> &vdata, std::vector<unsigned char> &adata, int &product_id, int timeout_sec);
 
 // Read video video/audio separately, should be started with AV_SEPARATE mode
 // Returns:
 //    < 0 : failure
 //   == 0 : success
 //   == 1 : timeout
-int read_thread_separate_video_frame(FFReader *video, std::vector<unsigned char> &buffer, int &raw_image_index, int timeout_sec);
+int read_thread_separate_video_frame(FFReader *video, std::vector<unsigned char> &buffer, int timeout_sec);
 int read_thread_separate_audio_frame(FFReader *video, std::vector<unsigned char> &buffer, int &product_id, int timeout_sec);
 
 // Read thread streaming data, should be started with AV_STREAMING mode
-int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> **buffer, int &raw_image_index);
+int read_thread_stream_video_frame(FFReader *video, std::vector<unsigned char> **buffer);
 // Read audio data of up to max_length size, read all in buffer if max_length == 0
 int read_thread_stream_audio_frame(FFReader *video, std::vector<unsigned char> &buffer, int &product_id, int max_length);
 

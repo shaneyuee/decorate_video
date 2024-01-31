@@ -107,7 +107,7 @@ void FFVideoEncodeThread::RUN()
 }
 
 // type: 0 - raw, 1 - video, 2 - audio
-int FFVideoEncodeThread::Write(const unsigned char *data, int length, int type, int video_frame_no)
+int FFVideoEncodeThread::Write(const unsigned char *data, int length, int type)
 {
     std::string s = type==0? "raw" : (type==1? "video" : "audio");
     AUTOTIMED(("Write queue "+s+" frame run").c_str(), enable_debug);
@@ -115,17 +115,13 @@ int FFVideoEncodeThread::Write(const unsigned char *data, int length, int type, 
     if(type && cnt++ < 10) // print the first 10 frames
         printf("[rawdata] %s, length: %d\n", type==EC_RAWMEDIA_VIDEO? "video" : "audio", length);
     // ver(int) + type(int) + length(int) + ext_header(video,int)
-    int offset = (type==EC_RAWMEDIA_VIDEO? (sizeof(MsgHead)+sizeof(ExtMsgHead)): (type? sizeof(MsgHead) : 0));
+    int offset = type? sizeof(MsgHead) : 0;
     vector<unsigned char> buf(length + offset);
     if (type)
     {
         ((MsgHead* )buf.data())->ver = 1; // version, hardcoded 1
         ((MsgHead* )buf.data())->type = type;
         ((MsgHead* )buf.data())->len = length;
-        if (type==EC_RAWMEDIA_VIDEO)
-        {
-            ((ExtMsgHead *)(buf.data()+sizeof(MsgHead)))->image_index = video_frame_no;
-        }
     }
     memcpy(buf.data()+offset, data, length);
     // last = buf;

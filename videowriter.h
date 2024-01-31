@@ -26,7 +26,7 @@ public:
 
     // write data to file/fifo
     //   - type: 0 - raw, 1 - video, 2 - audio
-    int Write(const unsigned char *data, int length, int type, int video_frame_no = 0);
+    int Write(const unsigned char *data, int length, int type);
 
     void STOP(bool force = false)
     {
