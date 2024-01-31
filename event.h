@@ -14,13 +14,27 @@ enum EventCode
     ET_MATERIAL_ADD_SUCC = 2510,
     ET_MATERIAL_DEL_SUCC = 2511,
     ET_MATERIAL_MOD_SUCC = 2512,
+    ET_START_OF_STREAM = 2513,
+    ET_END_OF_STREAM = 2514,
+};
 
-    ET_LOGIN_FAILURE = 3001,
-    ET_STARTSEND_FAILURE = 3002,
-    ET_LOGIN_SUCCESS = 3501,
-    ET_STARTSEND_SUCCESS = 3502,
-    ET_START_OF_STREAM = 3503,
-    ET_END_OF_STREAM = 3504,
+static struct {
+    EventCode e;
+    const char *desc;
+} event_codes[] = {
+    {ET_PUSH_FAILURE, "Write failure"},
+    {ET_INIT_FAILURE, "Init failure"},
+    {ET_READ_FAILURE, "Read failure"},
+    {ET_STREAM_NONEXIST, "Stream not exist"},
+    {ET_MATERIAL_ADD_FAIL, "Material add failure"},
+    {ET_MATERIAL_DEL_FAIL, "Material delete failure"},
+    {ET_MATERIAL_MOD_FAIL, "Material modify failure"},
+    {ET_INIT_SUCCESS, "Init success"},
+    {ET_MATERIAL_ADD_SUCC, "Material add success"},
+    {ET_MATERIAL_DEL_SUCC, "Material delete success"},
+    {ET_MATERIAL_MOD_SUCC, "Material modify success"},
+    {ET_START_OF_STREAM, "Start of streaming"},
+    {ET_END_OF_STREAM, "End of streaming"},
 };
 
 enum MsgCommand

@@ -124,7 +124,7 @@ int finish_fifo_event()
 
 int64_t getCurrentTime()
 {
-    struct timeval tv;    
+    struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
@@ -138,26 +138,10 @@ int send_event(EventCode code, const std::string &msg)
         return -1;
     }
 
-    pb_buff_t pb;
-    uint8_t buf[msg.length()+32];
-    // packet format    4Byte     4Byte     4Byte     0or4Byte   VarLen
-    // little endian   Version + MsgType + BodyLen + ExtHeader + Body
-    ((int *)buf)[0] = 1; // version
-    ((int *)buf)[1] = EC_EVENT_DECORATE_SDK; // decorate video SDK events
-    ((int *)buf)[2] = 0; // header length
-    pb_init_buff(&pb, buf+sizeof(MsgHead), msg.length()+32-sizeof(MsgHead));
-
-    // Body part is a pb message
-    // message DecorateEvent
-    // {
-    //     int64 timestamp = 1;  // 时间戳 毫秒级
-    //     int32 eventCode = 2;  // 合成事件码
-    //     string eventMsg = 3;  // 合成事件描述
-    // }
-    pb_add_varint(&pb, 1, getCurrentTime());
-    pb_add_varint(&pb, 2, code);
-    pb_add_string(&pb, 3, msg.data(), msg.size());
-    ((int *)buf)[2] = pb_get_encoded_length(&pb); // header length
-
-    return pushEventThread.Write(buf, ((int *)buf)[2]+sizeof(MsgHead));
+    // {"code":"123", "timestamp":"112233", "message":""}
+    int size = msg.length()+256;
+    char buf[size];
+    int len = snprintf(buf, size-1, "{\"code\":\"%d\", \"timestamp\":\"%lld\", \"message\":\"%s\"}\n", (int)code, getCurrentTime(), msg.c_str());
+    buf[size-1] = 0;
+    return pushEventThread.Write((unsigned char *)buf, len);
 }

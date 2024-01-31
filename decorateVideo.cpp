@@ -219,22 +219,36 @@ int main(int argc, char **argv) {
         std::cout << "  --rawvideo=fmt:w:h:fps:bitrate        # read mainvideo as rawdata, specify video format" << std::endl;
         std::cout << "                                        # fmt must be one of \"bgr\", \"bgra\", \"rgb\"" << std::endl;
         std::cout << "  --rawaudio=fmt:samplerate:channelnum  # read mainvideo as rawvideo + rawaudio, fmt must be \"pcm_s16le\"" << std::endl;
-        std::cout << "                                        # mainvideo format: <dwType><dwLength><ExtHeader><acValue>" << std::endl;
-        std::cout << "                                        #    dwType:   4 bytes, host order, 1 - video(ExtHeader=4byte, image index); 2 - audio(no ExtHeader)" << std::endl;
+        std::cout << "                                        # mainvideo/mainaudio format: <dwType><dwLength><ExtHeader><acValue>" << std::endl;
+        std::cout << "                                        #    dwType:   4 bytes, host order, 1 - rawvideo; 2 - rawaudio; 3 - audio with ExtHeader(uint32 product_id, host order)" << std::endl;
         std::cout << "                                        #    dwLength: 4 bytes, host order, packet length or length of acValue" << std::endl;
         std::cout << "                                        #    acValue:  dwLength bytes, video or audio packet data" << std::endl;
-        std::cout << "  --stream_out=protocol://proto_spec    # protocol can be rtmp, this option must be use with - output filename" << std::endl;
-        std::cout << "                                        # for rtmp rtmp://server/url/streamname" << std::endl;
+        std::cout << "  --stream_out=protocol://proto_spec    # protocol can be rtmp, this option must be use with '-' output filename" << std::endl;
+        std::cout << "                                        # for rtmp: rtmp://server/url/streamname" << std::endl;
         std::cout << "  --substream_out=protocol://proto_spec:<width>:<height>:<framerate>:<bitrate>:<disable_audio(0|1)> # support a sub stream output, currently only support rtmp" << std::endl;
-        std::cout << "  --stream_cmd_fifo=fifo_file           # streaming controlling fifo, see rawaudio for format" << std::endl;
-        std::cout << "                                        #           example 1: dwType=12(ADD), acValue=0:13:text:TestVideo:0:0:400:200:20:0:0:#0ff:10:#ff0" << std::endl;
-        std::cout << "                                        #           example 2: dwType=13(DEL), acValue=0:13" << std::endl;
-        std::cout << "                                        #           example 3: dwType=14(MOD), acValue=0:13:100:100:400:200" << std::endl;
-        std::cout << "                                        #           example 4: dwType=15(SUBOUT), acValue=rtmp://rtmp_spec:<width>:<height>:<fps>:<bitrate>:<disable_audio(0|1)>" << std::endl;
-        std::cout << "  --stream_cmd_txtfile=file             # streaming controlling file, ignored if stream_cmd_fifo is set" <<std::endl;
-        std::cout << "                                        #           normal file in pure text line format: <ADD|DEL|MOD> <param_string> " << std::endl;
+        std::cout << "  --stream_cmd_fifo=fifo_file           # streaming controlling fifo in text line, format:" << std::endl;
+        std::cout << "                                        #     <operation><space><arguments_separated_by_comma>\\n" << std::endl;
+        std::cout << "                                        # Available operations:" << std::endl;
+        std::cout << "                                        #     ADD <product_id>:<material_id>:<material_spec>" << std::endl;
+        std::cout << "                                        #     DEL <product_id>:<material_id>" << std::endl;
+        std::cout << "                                        #     MOD <product_id>:<material_id>:<layer>:<top>:<left>:<width>:<height>" << std::endl;
+        std::cout << "                                        #     SUBOUT rtmp://<rtmp_spec>:<width>:<height>:<fps>:<bitrate>:<disable_audio(0|1)> # add substream output, only support rtmp" << std::endl;
+        std::cout << "                                        #     STOPSUB # stops current substream output" << std::endl;
+        std::cout << "                                        #     SWPROD <product_id> # switch to new product" << std::endl;
+        std::cout << "                                        # Examples:" << std:: endl;
+        std::cout << "                                        #     eg.1: ADD 0:13:text:2:TestVideo:0:0:400:200:20:0:0:#0ff:10:#ff0" << std::endl;
+        std::cout << "                                        #     eg.2: DEL 0:13" << std::endl;
+        std::cout << "                                        #     eg.3: MOD 0:13:3:100:100:400:200" << std::endl;
+        std::cout << "                                        #     eg.4: SUBOUT rtmp://test_server.com/testdomain/teststream:1080:1920:25:2000000:0" << std::endl;
+        std::cout << "  --stream_cmd_txtfile=file             # streaming controlling file, same as stream_cmd_fifo except the file is a normal text file" <<std::endl;
         std::cout << "  --stream_buffer_size=size             # stream buffer size, keep only most recent <size> frames in buffer" << std::endl;
-        std::cout << "  --notify_fifo_event=fifo_file         # notify event to caller by named fifo, see rawaudio for format" << std::endl;
+        std::cout << "  --notify_fifo_event=fifo_file         # notify event to caller by named fifo, format:" << std::endl;
+        std::cout << "                                        #     {\"code\":\"123\", \"timestamp\":\"112233\", \"message\":\"\"}" << std::endl;
+        std::cout << "                                        # Available codes:" << std::endl;
+        for (auto &c : event_codes)
+        {
+        std::cout << "                                        #     " << c.e << ": " << c.desc << std::endl;
+        }
         std::cout << "  --watermark=text:font:size:#rgbcolor:rotation:opacity:rows:cols:top:left:width:height:#olcolor" << std::endl;
         std::cout << "                                        # set water mark, parameters:" << std::endl;
         std::cout << "                                        #       text: text as water mark" << std::endl;
