@@ -1236,7 +1236,7 @@ int main(int argc, char **argv) {
 
         // static image only
         if(m.type == material::MT_Gif || m.type == material::MT_Video ||
-             m.type == material::MT_MainVideo || m.type == material::MT_Clock)
+             m.type == material::MT_MainVideo || m.type == material::MT_Time || m.type == material::MT_Clock)
             break;
 
         cv::Mat *pmat, mask;
@@ -1755,7 +1755,7 @@ int main(int argc, char **argv) {
                     else
                     {
                         // always redraw gif and video, but not others
-                        bool redraw = m.ctx.glTexture==0 || m.type==material::MT_Gif || m.type==material::MT_Video || m.type==material::MT_Clock;
+                        bool redraw = m.ctx.glTexture==0 || m.type==material::MT_Gif || m.type==material::MT_Video || m.type==material::MT_Time || m.type==material::MT_Clock;
                         if (m.ctx.ftype == materialcontext::FT_BGR)
                             m.ctx.glTexture = gl_render_texture_bgr(m.ctx.glTexture, redraw? pmat->data : NULL, pmat->cols, pmat->rows, 
                                         m.rect.x, m.rect.y, m.rect.width, m.rect.height, m.rotation, m.opacity);

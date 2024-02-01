@@ -586,10 +586,10 @@ void get_text_image(material &m, const char *text)
     }
     m.opacity = 100;
     m.rotation = 0;
+    m.ctx.frames.clear();
     m.ctx.frames.push_back(mat.clone());
     m.ctx.w = mat.cols;
     m.ctx.h = mat.rows;
-    m.ctx.fps = 0;
 }
 
 int open_materials(std::vector<material> &mlist, double x_ratio, double y_ratio, rawaudioinfo *audioinfo, material *mainaudio, int stream_buffer_size, int out_fps, bool disable_opengl, int product_id)
@@ -722,6 +722,7 @@ __decode_gif:
                 replace_all(fmt, "%20%", " ");
                 replace_all(fmt, "%c%", ":");
                 get_text_image(m, fmt.c_str());
+                m.ctx.fps = 0;
                 LOG_INFO("text2image [%s] got one frame with size=[%d,%d]", m.text, m.ctx.w, m.ctx.h);
             }
             break;
@@ -1059,7 +1060,6 @@ cv::Mat *read_next_frame(material &m, double ts, bool disable_opengl)
             struct tm *info = localtime(&rawtime);
             char buffer[1024];
             strftime(buffer, sizeof(buffer), m.text, info);
-            m.ctx.frames.clear();
             get_text_image(m, buffer);
             m.ctx.cts += m.ctx.tstep;
         }
