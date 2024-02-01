@@ -7,7 +7,7 @@
 #include "material.h"
 #include "matops.h"
 #include "decorateVideo.h"
-#include "3rd/gifdecoder/ffgif.h"
+#include "ffgif.h"
 #include "event.h"
 #include "3rd/log/LOGHelp.h"
 

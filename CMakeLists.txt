@@ -112,7 +112,7 @@ find_package(glfw3 REQUIRED)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/3rd/cvxfont)
 
-add_executable(${PROJECT_NAME} decorateVideo.cpp videoplayer.cpp videowriter.cpp matops.cpp 3rd/gifdecoder/ffgif.cpp 3rd/cvxfont/cvxfont.cpp 3rd/shmqueue/shm_queue.c gl_render.cpp egl.cpp glad/glad.c pb.c event.cpp material.cpp stream_cmd.cpp ${LOG_srcs} ${FILTER_SRC})
+add_executable(${PROJECT_NAME} decorateVideo.cpp videoplayer.cpp videowriter.cpp matops.cpp ffgif.cpp 3rd/cvxfont/cvxfont.cpp 3rd/shmqueue/shm_queue.c gl_render.cpp egl.cpp glad/glad.c pb.c event.cpp material.cpp stream_cmd.cpp ${LOG_srcs} ${FILTER_SRC})
 
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 target_link_libraries(${PROJECT_NAME} ${ffmpeg_LIBS})

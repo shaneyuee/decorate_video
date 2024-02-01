@@ -22,6 +22,13 @@ https://www.johnvansickle.com/ffmpeg/old-releases/ffmpeg-5.1.1-i686-static.tar.x
 
 ## Run example
 
+Example 1: set video at center with blue background color
 ```
-./decorateVideo --disable_opengl out.mp4:1080:1920 mainvideo:1:intro.mp4:0:0:1080:1920
+./decorateVideo --disable_opengl --bg_color=#f00 out.mp4:1080:1920 mainvideo:1:intro.mp4:640:0:1080:640
 ```
+
+Example 2: put an analog clock to video
+```
+./decorateVideo out.mp4:1080:1920 mainvideo:1:intro.mp4:0:0:1080:1920 clock:2:resources/analog_clock/clock.png,resources/analog_clock/hour.png,resources/analog_clock/minute.png,resources/analog_clock/second.png:100:100:400:400:1706760000
+```
+

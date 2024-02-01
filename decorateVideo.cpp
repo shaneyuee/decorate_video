@@ -8,8 +8,7 @@
 #include <thread>
 #include <signal.h>
 #include <execinfo.h>
-#include "3rd/gifdecoder/ffgif.h"
-#include "3rd/gifdecoder/gifdec.h"
+#include "ffgif.h"
 #include "videoplayer.h"
 #include "version.h"
 #include "gl_render.h"
