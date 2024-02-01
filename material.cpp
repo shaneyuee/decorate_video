@@ -209,8 +209,8 @@ static int parse_material_text(std::vector<std::string> &strs, material &m, cons
             case 6: // height
                 m.rect.height = atoi(s1.c_str())* y_ratio;
                 break;
-            case 7: // font size
-                m.fontsize = atoi(s1.c_str());
+            case 7: // start time
+                m.clock_starttime = atoi(s1.c_str());
                 break;
             case 8: // rotation
                 m.rotation = atoi(s1.c_str()) % 360;
@@ -234,7 +234,10 @@ static int parse_material_text(std::vector<std::string> &strs, material &m, cons
                     }
                 }
                 break;
-            case 11: // font color
+            case 11: // font size
+                m.fontsize = atoi(s1.c_str());
+                break;
+            case 12: // font color
                 {
                     if (s1[0] != '#' || s1.length() < 4)
                     {
@@ -249,10 +252,10 @@ static int parse_material_text(std::vector<std::string> &strs, material &m, cons
                     m.color[3] = 0xff;
                 }
                 break;
-            case 12: // outline size
+            case 13: // outline size
                 m.olsize = atoi(s1.c_str());
                 break;
-            case 13: // outline color
+            case 14: // outline color
                 {
                     if (s1[0] != '#' || s1.length() < 4)
                     {
@@ -311,7 +314,26 @@ bool check_has_stream(std::vector<material> &mlist)
 
 int parse_material(const std::string &s, material &mm, const char *data_dir, double x_ratio, double y_ratio)
 {
-    material m = { .layer = 0, .type = material::MT_None, .product_id = 0, .material_id = 0, .text = {0}, .path = {0}, .rect = {0,0,0,0}, .ori_video_rect = {0,0,0,0}, .volume = 0, .rotation=0, .opacity=100, .font = {0}, .fontsize = 0, .olsize = 0, .color = {0}, .olcolor = {0}, .ctx = {0} };
+    material m = {
+        .layer = 0,
+        .type = material::MT_None,
+        .product_id = 0,
+        .material_id = 0,
+        .text = {0},
+        .path = {0}, 
+        .rect = {0,0,0,0},
+        .ori_video_rect = {0,0,0,0},
+        .volume = 0,
+        .rotation = 0,
+        .opacity = 100,
+        .clock_starttime = 0,
+        .font = {0},
+        .fontsize = 0,
+        .olsize = 0,
+        .color = {0},
+        .olcolor = {0},
+        .ctx = {0}
+    };
 
     std::vector<std::string> strs;
     const char *p = NULL;
@@ -406,6 +428,10 @@ int parse_material(const std::string &s, material &mm, const char *data_dir, dou
                         m.volume = 0;
                     if (m.volume >= 100)
                         m.volume = 100;
+                }
+                else if(m.type==material::MT_Clock)
+                {
+                    m.clock_starttime = atoi(s1.c_str());
                 }
                 break;
             case 8: // rotation
@@ -834,18 +860,18 @@ __decode_gif:
                                 cv::resize(mat, mat, cv::Size(m.rect.width, m.rect.height), 0.0, 0.0, cv::INTER_CUBIC);
                         }
                     }
-                    // else
-                    // {
-                    //     int x = mat.cols * m.ctx.clock_x_ratio;
-                    //     int y = mat.rows * m.ctx.clock_y_ratio;
-                    //     if (x != mat.cols || y != mat.rows)
-                    //         cv::resize(mat, mat, cv::Size(x, y), 0.0, 0.0, cv::INTER_CUBIC);
-                    //     cv::Mat mat2(cv::Size(m.rect.width, m.rect.height), mat.type(), cv::Scalar::all(0.0));
-                    //     cv::Mat fg, bg;
-                    //     GetOverlapMatries(bg, fg, mat2, mat, (mat2.cols-mat.cols)/2, (mat2.rows-mat.rows)/2, mat.cols, mat.rows);
-                    //     fg.copyTo(bg);
-                    //     mat = mat2;
-                    // }
+                    else
+                    {
+                        int x = mat.cols * m.ctx.clock_x_ratio;
+                        int y = mat.rows * m.ctx.clock_y_ratio;
+                        if (x != mat.cols || y != mat.rows)
+                            cv::resize(mat, mat, cv::Size(x, y), 0.0, 0.0, cv::INTER_CUBIC);
+                        cv::Mat mat2(cv::Size(m.rect.width, m.rect.height), mat.type(), cv::Scalar::all(0.0));
+                        cv::Mat fg, bg;
+                        GetOverlapMatries(bg, fg, mat2, mat, (mat2.cols-mat.cols)/2, (mat2.rows-mat.rows)/2, mat.cols, mat.rows);
+                        fg.copyTo(bg);
+                        mat = mat2;
+                    }
                     LOG_INFO("Got clock image %d:%s, w=%d, h=%d, channels=%d, type=%d", i, s.c_str(), mat.cols, mat.rows, mat.channels(), mat.type());
 
                     if (m.opacity > 0 && m.opacity < 100)
@@ -1027,7 +1053,9 @@ cv::Mat *read_next_frame(material &m, double ts, bool disable_opengl)
         }
         if (m.ctx.frames.empty() || m.ctx.cts + m.ctx.tstep < ts)
         {
-            time_t rawtime = time(NULL);
+            if (m.clock_starttime == 0)
+                m.clock_starttime = time(NULL);
+            time_t rawtime = m.clock_starttime + (int)ts/1000;
             struct tm *info = localtime(&rawtime);
             char buffer[1024];
             strftime(buffer, sizeof(buffer), m.text, info);
@@ -1053,7 +1081,9 @@ cv::Mat *read_next_frame(material &m, double ts, bool disable_opengl)
             if (m.ctx.frames.size() <= 4 || m.ctx.cts + m.ctx.tstep < ts)
             {
                 cv::Mat mat = m.ctx.frames[0].clone();
-                time_t rawtime = time(NULL);
+                if (m.clock_starttime == 0)
+                    m.clock_starttime = time(NULL);
+                time_t rawtime = m.clock_starttime + (int)ts/1000;
                 struct tm *info = localtime(&rawtime);
                 int rotation_sec = info->tm_sec * 6;
                 int rotation_min = info->tm_min * 6 + info->tm_sec / 10;

@@ -42,6 +42,7 @@ struct material
     int volume; // audio volume, 0-100
     int rotation; // clockwise rotation degree, -360 - 360
     int opacity; // opacity percentage, 0 - 100
+    int64_t clock_starttime; // starting timestamp in unix_timestamp seconds
 
     // text attributes
     char font[1024];

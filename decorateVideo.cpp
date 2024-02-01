@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
 
     if (argc < 3) {
         std::cout << std::endl;
-        std::cout << "Bad argument, usage:" << std::endl;
+        std::cout << "Usage:" << std::endl;
         std::cout << argv[0] << " <options> <output_video_param> <material_1> <material_2> ..." << std::endl;
         std::cout << std::endl;
         std::cout << "Available options: " << std::endl;
@@ -295,18 +295,23 @@ int main(int argc, char **argv) {
         std::cout << "    - volume: optional, for video/audio only, the sound volume, range 0-100" << std::endl;
         std::cout << "    - rotation: clockwise rotation degree from -360 - 360" << std::endl;
         std::cout << "    - opacity: transparancy percentage, 1 - 100, 0 is equal to 100, fully opaque" << std::endl;
+        std::cout << std::endl;
         std::cout << "Material format for text/time:" << std::endl;
-        std::cout << "  <type>:<layer>:<text|time_format>:<top>:<left>:<width>:<height>:<fontsize>:<rotation>:<opacity>:<font>:<color>:<outlinesize>:<outlinecolor>" << std::endl;
+        std::cout << "  <type>:<layer>:<text|time_format>:<top>:<left>:<width>:<height>:<starttime>:<rotation>:<opacity>:<font>:<fontsize>:<color>:<outlinesize>:<outlinecolor>" << std::endl;
         std::cout << "    - type: text or time" << std::endl;
-        std::cout << "    - time_format: same as strftime() format, use %20% for space, %c% for ':', see https://www.runoob.com/cprogramming/c-function-strftime.html" << std::endl;
+        std::cout << "    - time_format: same as strftime() format, use %20% for space, %c% for ':', see https://man7.org/linux/man-pages/man3/strftime.3.html" << std::endl;
+        std::cout << "    - starttime: starting timestamp in seconds, unix timestamp, 0 for system time." << std::endl;
         std::cout << "    - please see --watermark for explaination of other parameters" << std::endl;
+        std::cout << std::endl;
         std::cout << "Material format for clock(analog clock):" << std::endl;
-        std::cout << "  <type>:<layer>:<image_path_list>:<top>:<left>:<width>:<height>" << std::endl;
+        std::cout << "  <type>:<layer>:<image_path_list>:<top>:<left>:<width>:<height>:<starttime>" << std::endl;
         std::cout << "    - type: clock " << std::endl;
         std::cout << "    - image_path_list: image path list separated by ',', must have exactly four images: " << std::endl;
         std::cout << "                       (0) clock background; (1) hour pointer; (2) minute pointer; (3) second pointer." << std::endl;
         std::cout << "                       All pointers must point to 00:00:00, and will be rotated by center point." << std::endl;
-        std::cout << "Material format for product:(a group a set of materials, enabling batch switching by command)" << std::endl;
+        std::cout << "    - starttime: starting timestamp in seconds, unix timestamp, 0 for system time." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Material format for product:(a set of materials, enabling batch switching and/or modification on demand)" << std::endl;
         std::cout << "  product:<product_id>:<material_id>:<material_spec>" << std::endl;
         std::cout << "     - product_id: an integer starting at 1, if it is 0, the material is used for all products" << std::endl;
         std::cout << "     - material_id: an integer start at 1 to uniquely specify a material, it is used to delete by command" << std::endl;
