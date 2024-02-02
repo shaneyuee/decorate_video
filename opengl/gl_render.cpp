@@ -13,8 +13,8 @@
 #include <vector>
 #include <unistd.h>
 #include "egl.h"
-#include "decorateVideo.h"
-#include "AutoTime.h"
+#include "../decorateVideo.h"
+#include "../AutoTime.h"
 #include "gl_render.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

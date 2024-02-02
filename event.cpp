@@ -7,7 +7,6 @@
 #include <stdio.h>    
 #include <sys/time.h>
 #include "event.h"
-#include "pb.h"
 #include "safequeue.h"
 #include "3rd/log/LOGHelp.h"
 

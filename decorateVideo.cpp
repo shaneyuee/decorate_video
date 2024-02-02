@@ -11,7 +11,7 @@
 #include "ffgif.h"
 #include "videoplayer.h"
 #include "version.h"
-#include "gl_render.h"
+#include "opengl/gl_render.h"
 #include "AutoTime.h"
 #include "matops.h"
 #include "decorateVideo.h"
